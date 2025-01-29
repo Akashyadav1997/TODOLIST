@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import fs from "fs";
 
 import { cloudinaryUpload } from "../utils/cloudinary.js";
-import { User } from "../Models/user.js";
+import { User } from "../models/user.js";
 import { Events } from "../models/events.js";
 
 export const createUser = async (req, res, next) => {
