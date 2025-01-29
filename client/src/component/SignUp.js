@@ -10,44 +10,60 @@ import "@uppy/dashboard/dist/style.min.css";
 import "@uppy/image-editor/dist/style.min.css";
 import "@uppy/screen-capture/dist/style.min.css";
 import "@uppy/webcam/dist/style.min.css";
+import Loader from "./Loader";
+import { toast } from "react-toastify";
 
-const SignUp = ({ setShowSignUp }) => {
+const SignUp = ({ setShowSignUp, setUserLoggedIn }) => {
+	const url = process.env.REACT_APP_SERVER_URL;
 	const [uppy, setUppy] = useState(null);
 	const [isOpen, setIsOpen] = useState(false);
+	const updatedProfilePictureData = useRef(null);
 	const updatedProfilePicture = useRef(null);
-	// useEffect(() => {
-	// 	const uppyInstance = new Uppy({
-	// 		restrictions: {
-	// 			maxNumberOfFiles: 1,
-	// 			allowedFileTypes: [".jpg", ".jpeg", ".png"],
-	// 			maxFileSize: 3 * 1024 * 1024,
-	// 		},
-	// 	});
-	// 	uppyInstance.use(Dashboard, {
-	// 		id: "Dashboard",
-	// 		target: "#uppy-modal",
-	// 	});
+	const [isLoading, setIsLoading] = useState(false);
+	const [userDetails, setUserDetails] = useState({
+		username: "",
+		password: "",
+		email: "",
+	});
+	const handleChange = (e) => {
+		setUserDetails((prevValue) => ({
+			...prevValue,
+			[e.target.name]: e.target.value,
+		}));
+	};
+	const createUser = async () => {
+		if (!updatedProfilePictureData.current) {
+			return toast.error("Please Select Profile Picture");
+		}
+		if (userDetails.username === "" || userDetails.password === "") {
+			return toast.error("Please Enter your Credentials");
+		}
+		setIsLoading(true);
+		const formdata = new FormData();
+		formdata.append("username", userDetails.username);
+		formdata.append("password", userDetails.password);
+		formdata.append("email", userDetails.email);
+		// formdata.append("avatar", updatedProfilePictureData.current);
 
-	// 	uppyInstance.use(Webcam, {
-	// 		id: "Webcam",
-	// 		target: Dashboard,
-	// 	});
-
-	// 	uppyInstance.use(ScreenCapture, {
-	// 		id: "ScreenCapture",
-	// 		target: Dashboard,
-	// 	});
-
-	// 	uppyInstance.use(ImageEditor, {
-	// 		id: "ImageEditor ",
-	// 		target: Dashboard,
-	// 		quality: 0.8,
-	// 		cropperOptions: {
-	// 			aspectRatio: 1,
-	// 		},
-	// 	});
-	// 	setUppy(uppyInstance);
-	// }, []);
+		const response = await fetch(`${url}/createuser`, {
+			headers: {
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+			body: JSON.stringify({
+				username: userDetails.username,
+				password: userDetails.password,
+				email: userDetails.email,
+			}),
+		});
+		const { message, success } = await response.json();
+		if (!success) toast.error(message);
+		if (success) {
+			toast.success(message);
+			setUserLoggedIn(true);
+		}
+		setIsLoading(false);
+	};
 	useEffect(() => {
 		const uppyInstance = new Uppy({
 			restrictions: {
@@ -80,6 +96,7 @@ const SignUp = ({ setShowSignUp }) => {
 		uppyInstance.on("file-editor:complete", (updatedFile) => {
 			console.log("below is the updaded file");
 			console.log(updatedFile);
+			updatedProfilePictureData.current = updatedFile.data;
 			updatedProfilePicture.current = URL.createObjectURL(updatedFile.data);
 			setIsOpen(false);
 		});
@@ -91,7 +108,7 @@ const SignUp = ({ setShowSignUp }) => {
 
 	return (
 		<div className="background h-screen flex items-center justify-center">
-			<div className=" w-4/12 h-4/6 bg-white z-10 rounded-lg flex items-center flex-col">
+			<div className=" w-4/12 h-5/6 bg-white z-10 rounded-lg flex items-center flex-col">
 				{uppy && (
 					<DashboardModal
 						uppy={uppy}
@@ -114,17 +131,31 @@ const SignUp = ({ setShowSignUp }) => {
 					onClick={() => setIsOpen(true)}
 				/>
 				<input
+					type="text"
+					name="username"
+					onChange={handleChange}
+					placeholder="Enter your Name "
+					className="mt-6 w-4/6 ring-1 ring-gray-400 p-2 rounded"
+				/>
+				<input
 					type="email"
+					name="email"
+					onChange={handleChange}
 					placeholder="Enter your email "
 					className="mt-6 w-4/6 ring-1 ring-gray-400 p-2 rounded"
 				/>
 				<input
 					type="password"
+					name="password"
+					onChange={handleChange}
 					placeholder="Enter your password "
 					className="mt-6 w-4/6 ring-1 ring-gray-400 p-2 rounded"
 				/>
-				<button className="w-4/6 rounded-lg bg-blue-500 text-white mt-6 p-3 hover:bg-blue-700 duration-300">
-					Create User
+				<button
+					className="w-4/6 rounded-lg bg-blue-500 text-white mt-6 p-3 hover:bg-blue-700 duration-300 flex justify-center items-center"
+					onClick={createUser}
+				>
+					{isLoading ? <Loader /> : "Sign Up"}
 				</button>
 				<span className="mt-2">OR</span>
 				<p

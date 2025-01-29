@@ -1,16 +1,17 @@
 import moment from "moment";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Modal from "./Modal";
 import { MdDarkMode } from "react-icons/md";
 import { IoMdSunny } from "react-icons/io";
 import { BsCalendar2CheckFill } from "react-icons/bs";
-
-const ToDoList = () => {
+import { useDispatch, useSelector } from "react-redux";
+import { compose } from "@reduxjs/toolkit";
+import Loader from "./Loader";
+const ToDoList = ({ setUserLoggedIn }) => {
+	const url = process.env.REACT_APP_SERVER_URL;
 	const [allEvents, setAllEvents] = useState([]);
 	const [inputText, setInputText] = useState("");
-	// const editInputValue = useRef(null);
-	// const editInputId = 0;
 	const [editValue, setEditValue] = useState({});
 	const [deleteValue, setDeleteValue] = useState({});
 	const [showEditModal, setShowEditModal] = useState(false);
@@ -19,23 +20,37 @@ const ToDoList = () => {
 	const [darkMode, setDarkMode] = useState(false);
 	const [completeEvents, setCompleteEvents] = useState([]);
 	const completedItems = useRef([]);
+	const [completeLoader, setCompleteLoader] = useState(false);
+	const [deleteLoader, setDeleteLoader] = useState(false);
+	const { email, name, id } = useSelector(
+		(state) => state.userReducer.user || {}
+	);
+	const events = useSelector((state) => state.eventLists || []);
+	const dispatch = useDispatch();
+	console.log(id);
 
-	const handleInputSubmit = () => {
+	const handleInputSubmit = async () => {
 		if (inputText === "") {
 			return toast.error("Please Enter the Field First");
 		}
-
-		// save the event to all events
-		setAllEvents((prevData) => [
-			...prevData,
-			{
+		const response = await fetch(`${url}/createevent`, {
+			method: "POST",
+			body: JSON.stringify({
 				title: inputText,
 				creationDate: new Date(),
-				priority: "medium",
 				id: Date.now(),
 				completion: false,
+				email: email,
+			}),
+			headers: {
+				"Content-Type": "application/json",
 			},
-		]);
+		});
+		const data = await response.json();
+		console.log(data);
+		if (data.success) {
+			dispatch({ type: "addEvent", payload: data.event });
+		}
 		setInputText("");
 	};
 
@@ -47,23 +62,43 @@ const ToDoList = () => {
 	const editModalChangeHandler = (e) => {
 		setEditValue((prevValue) => ({ ...prevValue, title: e.target.value }));
 	};
-	const submitEditModalHandler = () => {
-		const eventId = editValue.id;
-		const editedTitle = editValue.title;
-		allEvents.map((event) => {
-			if (event.id === eventId) {
-				event.title = editedTitle;
-			}
+	const submitEditModalHandler = async () => {
+		console.log(editValue);
+
+		const response = await fetch(`${url}/editEvent`, {
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ _id: editValue._id, title: editValue.title }),
+			method: "POST",
 		});
+		const { success, message } = await response.json();
+		if (success) {
+			dispatch({ type: "editEvent", payload: editValue });
+		}
 		setShowEditModal(false);
 	};
 	const handleDeleteClick = (event) => {
+		console.log(event);
+
 		setDeleteValue(event);
 		setShowDeleteModal(true);
 	};
-	const deleteModalHandler = (e) => {
-		e.preventDefault();
+	const deleteModalHandler = async () => {
+		const response = await fetch(`${url}/deleteEvent`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ _id: deleteValue._id }),
+		});
+		const { success, message } = await response.json();
+		if (success) {
+			toast.success(message);
+			dispatch({ type: "removeEvent", payload: { _id: deleteValue._id } });
+		}
 		console.log("delete modal wala is workinggggg");
+		console.log(deleteValue);
 		const deleteEventId = deleteValue.id;
 		const newlyEvents = allEvents.filter((event) => {
 			return event.id !== deleteEventId;
@@ -71,9 +106,21 @@ const ToDoList = () => {
 		setAllEvents(newlyEvents);
 		setShowDeleteModal(false);
 	};
-	const deleteAllModalHandler = () => {
-		setAllEvents([]);
-		setCompleteEvents([]);
+	const deleteAllModalHandler = async () => {
+		setDeleteLoader(true);
+		const response = await fetch(`${url}/deleteAll`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ _id: id }),
+		});
+		const { message, success } = await response.json();
+		if (success) {
+			toast.success(message);
+			dispatch({ type: "deleteAll" });
+		}
+		setDeleteLoader(false);
 		setDeleteAllModal(false);
 	};
 	const changeHandlerCompleteEvents = (event) => {
@@ -86,7 +133,23 @@ const ToDoList = () => {
 			}
 		});
 	};
-	const modifyCompletedEvents = () => {
+	const modifyCompletedEvents = async () => {
+		console.log("below is the compleeeee");
+		setCompleteLoader(true);
+		console.log(completeEvents);
+		const response = await fetch(`${url}/updateCompletion`, {
+			headers: {
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+			body: JSON.stringify({ events: completeEvents }),
+		});
+		const { success, message, results } = await response.json();
+		console.log(results);
+		if (success) {
+			toast.success(message);
+			dispatch({ type: "completeEvent", payload: results });
+		}
 		setAllEvents((data) => {
 			return data.map((item) => {
 				const isExist = completeEvents.some((data) => data.id === item.id);
@@ -96,7 +159,11 @@ const ToDoList = () => {
 				return item;
 			});
 		});
+		setCompleteLoader(false);
 	};
+	console.log(completeEvents);
+
+	useEffect(() => {}, [events]);
 	return (
 		<div
 			className={`${
@@ -107,18 +174,19 @@ const ToDoList = () => {
 		>
 			<div className="bg-white rounded-xl w-8/12 h-auto flex flex-col items-center dark:bg-slate-800 dark:text-white duration-1000 z-10">
 				<div className=" p-3 text-2xl font-bold my-5">To-Do</div>
-				<div className=" absolute self-start mt-3 ml-4 p-2 bg-blue-500 text-white rounded-lg font-bold cursor-pointer">
-					<select className=" bg-inherit cursor-pointer border-none outline-none">
+				<div className=" absolute self-start mt-3 ml-4 p-2 text-3xl ">
+					{/* <select className=" bg-inherit cursor-pointer border-none outline-none">
 						<option className="cursor-pointer" value="">
 							All
 						</option>
 						<option className="cursor-pointer" value="">
 							Completed
 						</option>
-					</select>
+					</select> */}
+					<h1 className=" capitalize">{name ? name : "Unkown"}</h1>
 				</div>
 				<div
-					className="self-end absolute p-2 "
+					className="self-end absolute p-2 flex"
 					onClick={() => {
 						setDarkMode((prevValue) => !prevValue);
 					}}
@@ -134,6 +202,12 @@ const ToDoList = () => {
 							className=" cursor-pointer"
 						/>
 					)}
+					<button
+						className=" ring-1 ring-red-500 text-red-500 rounded-lg p-2 capitalize mx-3 hover:text-white hover:bg-red-500 duration-300"
+						onClick={() => setUserLoggedIn(false)}
+					>
+						Logout
+					</button>
 				</div>
 				{/* input section  */}
 				<div className=" border-2 hover:border-blue-800 duration-300 w-5/6 h-12 flex justify-between rounded-xl my-8">
@@ -158,8 +232,8 @@ const ToDoList = () => {
 					</button>
 				</div>
 				<div className="w-full max-h-48 overflow-y-scroll text-center">
-					{allEvents.length !== 0 ? (
-						allEvents.map((event, index) => {
+					{events.length !== 0 ? (
+						events.map((event, index) => {
 							return (
 								<>
 									<div
@@ -218,14 +292,14 @@ const ToDoList = () => {
 				</div>
 				<hr className=" border w-5/6 mx-4 mt-4" />
 				<div className="flex justify-between w-full text-gray-400 px-4 py-8 items-center">
-					<span>Total Items {allEvents.length}</span>
+					<span>Total Items {events.length}</span>
 					<button
 						className={`ring-1 p-2 px-4 ring-gray-300 hover:ring-gray-500 duration-300 rounded-lg ${
 							completeEvents.length !== 0 && "bg-green-500 text-white"
 						}`}
 						onClick={modifyCompletedEvents}
 					>
-						Completed
+						{completeLoader ? <Loader /> : "Complete"}
 					</button>
 					<button
 						className="cursor-pointer border p-3 hover:border-red-600 rounded-lg  hover:bg-red-600 hover:text-white duration-500"
@@ -287,7 +361,7 @@ const ToDoList = () => {
 							className="bg-red-600 hover:bg-red-700 text-white font-semibold p-2 px-28 rounded-lg mt-8"
 							onClick={deleteAllModalHandler}
 						>
-							Yes
+							{deleteLoader ? <Loader /> : "Yes"}
 						</button>
 					</div>
 				</Modal>

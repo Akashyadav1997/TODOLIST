@@ -7,7 +7,7 @@ const VerifiedUser = () => {
 	console.log(userLoggedIn);
 
 	return userLoggedIn ? (
-		<ToDoList />
+		<ToDoList setUserLoggedIn={setUserLoggedIn} />
 	) : (
 		<Auth setUserLoggedIn={setUserLoggedIn} />
 	);

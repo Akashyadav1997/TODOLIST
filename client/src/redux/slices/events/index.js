@@ -1,14 +1,8 @@
-const { createSlice } = require("@reduxjs/toolkit");
+import { createReducer } from "@reduxjs/toolkit";
 
-const eventSlice = createSlice({
-	initialState: 0,
-	name: "eventsLength",
-	reducers: {
-		increament: (state) => state + 1,
-		decreament: (state) => state - 1,
-	},
+const initialValue = {};
+export const userReducer = createReducer(initialValue, (builer) => {
+	builer.addCase("updateUserDetails", (state, action) => {
+		return (state = action.payload);
+	});
 });
-
-export const { incremented, decremented } = eventSlice.actions;
-export default eventSlice.reducer;
-
