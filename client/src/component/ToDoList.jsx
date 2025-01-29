@@ -194,12 +194,12 @@ const ToDoList = ({ setUserLoggedIn }) => {
 					{darkMode ? (
 						<IoMdSunny
 							style={{ fontSize: "45px", color: "yellow" }}
-							className=" cursor-pointer"
+							className=" cursor-pointer mr-3"
 						/>
 					) : (
 						<MdDarkMode
 							style={{ fontSize: "45px", color: "#1b1a1a" }}
-							className=" cursor-pointer"
+							className=" cursor-pointer mr-3"
 						/>
 					)}
 					<button
