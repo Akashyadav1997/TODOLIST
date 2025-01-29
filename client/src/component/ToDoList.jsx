@@ -2,6 +2,9 @@ import moment from "moment";
 import React, { useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Modal from "./Modal";
+import { MdDarkMode } from "react-icons/md";
+import { IoMdSunny } from "react-icons/io";
+import { BsCalendar2CheckFill } from "react-icons/bs";
 
 const ToDoList = () => {
 	const [allEvents, setAllEvents] = useState([]);
@@ -9,11 +12,13 @@ const ToDoList = () => {
 	// const editInputValue = useRef(null);
 	// const editInputId = 0;
 	const [editValue, setEditValue] = useState({});
-	const [showEditModal, setShowEditModal] = useState(false);
 	const [deleteValue, setDeleteValue] = useState({});
+	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [showDeleteAllModal, setDeleteAllModal] = useState(false);
 	const [darkMode, setDarkMode] = useState(false);
+	const [completeEvents, setCompleteEvents] = useState([]);
+	const completedItems = useRef([]);
 
 	const handleInputSubmit = () => {
 		if (inputText === "") {
@@ -33,14 +38,10 @@ const ToDoList = () => {
 		]);
 		setInputText("");
 	};
-	// console.table(allEvents);
 
 	const handleEditClick = (event) => {
-		// console.log("edit handle click callleddd");
-		// console.log(e);
-		// console.log(event);
+		console.log(event);
 		setEditValue(event);
-		// editInputValue.current = event.title;
 		setShowEditModal(true);
 	};
 	const editModalChangeHandler = (e) => {
@@ -57,9 +58,7 @@ const ToDoList = () => {
 		setShowEditModal(false);
 	};
 	const handleDeleteClick = (event) => {
-		console.log("handle delete got clicked");
 		setDeleteValue(event);
-		console.log(deleteValue);
 		setShowDeleteModal(true);
 	};
 	const deleteModalHandler = (e) => {
@@ -74,7 +73,29 @@ const ToDoList = () => {
 	};
 	const deleteAllModalHandler = () => {
 		setAllEvents([]);
+		setCompleteEvents([]);
 		setDeleteAllModal(false);
+	};
+	const changeHandlerCompleteEvents = (event) => {
+		setCompleteEvents((prevValue) => {
+			const eventExist = prevValue.find((e) => e.id === event.id);
+			if (eventExist) {
+				return prevValue.filter((e) => e.id !== event.id);
+			} else {
+				return [...prevValue, event];
+			}
+		});
+	};
+	const modifyCompletedEvents = () => {
+		setAllEvents((data) => {
+			return data.map((item) => {
+				const isExist = completeEvents.some((data) => data.id === item.id);
+				if (isExist) {
+					return { ...item, completion: true };
+				}
+				return item;
+			});
+		});
 	};
 	return (
 		<div
@@ -84,7 +105,7 @@ const ToDoList = () => {
 				darkMode ? "dark" : null
 			}  duration-1000`}
 		>
-			<div className="bg-white rounded-xl w-5/12 h-auto flex flex-col items-center dark:bg-slate-700 dark:text-white duration-1000 z-10">
+			<div className="bg-white rounded-xl w-8/12 h-auto flex flex-col items-center dark:bg-slate-800 dark:text-white duration-1000 z-10">
 				<div className=" p-3 text-2xl font-bold my-5">To-Do</div>
 				<div className=" absolute self-start mt-3 ml-4 p-2 bg-blue-500 text-white rounded-lg font-bold cursor-pointer">
 					<select className=" bg-inherit cursor-pointer border-none outline-none">
@@ -97,12 +118,22 @@ const ToDoList = () => {
 					</select>
 				</div>
 				<div
-					className="self-end absolute mt-2 mr-3 font-bold border dark:text-black dark:bg-white hover:border-black duration-500 cursor-pointer p-2 rounded-lg bg-gray-500"
+					className="self-end absolute p-2 "
 					onClick={() => {
 						setDarkMode((prevValue) => !prevValue);
 					}}
 				>
-					{darkMode ? "Light Mode" : "Dark Mode"}
+					{darkMode ? (
+						<IoMdSunny
+							style={{ fontSize: "45px", color: "yellow" }}
+							className=" cursor-pointer"
+						/>
+					) : (
+						<MdDarkMode
+							style={{ fontSize: "45px", color: "#1b1a1a" }}
+							className=" cursor-pointer"
+						/>
+					)}
 				</div>
 				{/* input section  */}
 				<div className=" border-2 hover:border-blue-800 duration-300 w-5/6 h-12 flex justify-between rounded-xl my-8">
@@ -126,8 +157,8 @@ const ToDoList = () => {
 						Add
 					</button>
 				</div>
-				<div className="w-full max-h-48 overflow-y-scroll ">
-					{allEvents.length !== 0 &&
+				<div className="w-full max-h-48 overflow-y-scroll text-center">
+					{allEvents.length !== 0 ? (
 						allEvents.map((event, index) => {
 							return (
 								<>
@@ -135,7 +166,7 @@ const ToDoList = () => {
 										className="grid grid-cols-10 w-full  justify-items-center py-3 dark:hover:bg-slate-400 hover:bg-slate-200 duration-300 items-center border-b"
 										key={index}
 									>
-										<div className="col-span-2 flex flex-col items-center font-serif">
+										<div className="col-span-1 flex flex-col items-center font-serif">
 											<span>
 												{moment(event.creationDate).format("hh:mm A")}
 											</span>
@@ -146,12 +177,22 @@ const ToDoList = () => {
 										</div>
 										<input
 											type="checkbox"
-											className="col-span-1 border-2 cursor-pointer border-black"
+											onClick={() => changeHandlerCompleteEvents(event)}
+											className="border-2 cursor-pointer border-black mx-4 col-span-1"
 										/>
 										<div className=" font-sans col-span-5 text-2xl overflow-x-hidden break-all place-self-start">
 											{event.title.toLowerCase()}
 										</div>
-										<div className="grid grid-flow-col gap-1">
+										<div className="grid grid-flow-col col-span-3 gap-4">
+											{event.completion && (
+												<div className="flex flex-col col-span-1 items-center justify-center align-middle">
+													<BsCalendar2CheckFill
+														style={{ fontSize: "45px", color: "green" }}
+														className=" cursor-pointer"
+													/>
+													<p className=" text-[10px]">Completed</p>
+												</div>
+											)}
 											<button
 												className="bg-blue-600 py-3 px-4  col-span-1 rounded-lg text-white font-bold hover:bg-blue-800"
 												onClick={() => handleEditClick(event)}
@@ -168,11 +209,24 @@ const ToDoList = () => {
 									</div>
 								</>
 							);
-						})}
+						})
+					) : (
+						<span className=" text-center text-xl text-yellow-500 underline ">
+							You Have Not Assigned any Task
+						</span>
+					)}
 				</div>
 				<hr className=" border w-5/6 mx-4 mt-4" />
 				<div className="flex justify-between w-full text-gray-400 px-4 py-8 items-center">
 					<span>Total Items {allEvents.length}</span>
+					<button
+						className={`ring-1 p-2 px-4 ring-gray-300 hover:ring-gray-500 duration-300 rounded-lg ${
+							completeEvents.length !== 0 && "bg-green-500 text-white"
+						}`}
+						onClick={modifyCompletedEvents}
+					>
+						Completed
+					</button>
 					<button
 						className="cursor-pointer border p-3 hover:border-red-600 rounded-lg  hover:bg-red-600 hover:text-white duration-500"
 						onClick={() => setDeleteAllModal((prevValue) => !prevValue)}
@@ -213,6 +267,7 @@ const ToDoList = () => {
 						<h1 className="text-xl p-4 text-red-600 font-semibold">
 							Are You Sure You wants to Remove Below Event
 						</h1>
+						<h1 className=" text-xl">{deleteValue.title}</h1>
 						<button
 							className="bg-red-600 hover:bg-red-700 text-white font-semibold p-2 px-16 rounded-lg mt-8"
 							onClick={deleteModalHandler}
